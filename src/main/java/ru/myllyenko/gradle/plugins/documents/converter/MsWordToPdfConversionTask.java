@@ -104,6 +104,8 @@ public class MsWordToPdfConversionTask extends AbstractConversionTask
 	 */
 	public MsWordToPdfConversionTask()
 	{
+		super();
+
 		include("**/*.doc");
 		include("**/*.docx");
 
