@@ -45,7 +45,7 @@ final class DocumentConverterPluginSpecification extends Specification
 		"""
 			plugins
 			{
-				id "document-converter"
+				id "ru.myllyenko.document-converter"
 			}
 
 			task("${taskName}", type: ru.myllyenko.gradle.plugins.documents.converter.MsWordToPdfConversionTask)
