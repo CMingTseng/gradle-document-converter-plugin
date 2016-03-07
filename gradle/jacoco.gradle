@@ -1,0 +1,3 @@
+apply plugin: "jacoco"
+
+tasks.check.dependsOn "jacocoTestReport"

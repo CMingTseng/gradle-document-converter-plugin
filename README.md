@@ -3,7 +3,7 @@ This Gradle plugin provides document conversion facilities in the form of `Copy`
 
 Currently provided task types:
 
-*   [`ru.myllyenko.gradle.plugins.documents.converter.MsWordToPdfConversionTask`](#MsWordToPdfConversionTask): converts Microsoft Word documents to PDF.
+*   [`ru.myllyenko.gradle.plugins.documents.converter.MsWordToPdfConversionTask`]: converts Microsoft Word documents to PDF.
 
 ## MsWordToPdfConversionTask
 

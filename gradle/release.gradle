@@ -1,0 +1,4 @@
+release.tagTemplate = '${version}'
+
+beforeReleaseBuild.dependsOn check
+afterReleaseBuild.dependsOn publishPlugins

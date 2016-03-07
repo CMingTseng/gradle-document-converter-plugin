@@ -1,0 +1,15 @@
+apply plugin: "findbugs"
+
+findbugs
+{
+	effort = "max"
+	excludeFilterConfig = project.resources.text.fromString(
+	"""<FindBugsFilter>
+		<Match>
+			<Bug pattern="VO_VOLATILE_INCREMENT"/>
+		</Match>
+		<Match>
+			<Bug pattern="NP_NULL_ON_SOME_PATH_FROM_RETURN_VALUE"/>
+		</Match>
+	</FindBugsFilter>""")
+}

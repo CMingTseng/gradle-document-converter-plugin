@@ -1,0 +1,37 @@
+<!DOCTYPE html>
+<html>
+	<body>
+		<p>This Gradle plugin provides document conversion facilities in the form of <code>Copy</code>-like Gradle tasks.</p>
+		<p>Currently provided task types:</p>
+		<ul>
+			<li><a href="#MsWordToPdfConversionTask"><code>ru.myllyenko.gradle.plugins.documents.converter.MsWordToPdfConversionTask</code></a>:
+					converts Microsoft Word documents to PDF.
+		</ul>
+		<h2 id="MsWordToPdfConversionTask">MsWordToPdfConversionTask</h2>
+		<p>It processes input files as a Copy task configured in the following way:</p>
+		<ul>
+			<li><code>include("**/*.doc")</code>;
+			<li><code>include("**/*.docx")</code>;
+			<li><code>rename("(.+)\\.docx?$", "$1.pdf")</code>.
+		</ul>
+		<p>By default on Windows systems a local MS Word instance is used for conversion as described
+				<a href="http://www.suodenjoki.dk/us/productions/articles/word2pdf.htm">here</a>. This can be disabled by setting the
+				<code>useLocalMsWord</code> parameter to <code>false</code>.</p>
+		<p>On other operating systems and when <code>useLocalMsWord</code> is set to <code>false</code>, conversion is performed by means of
+				third-party Java libraries: Apache POI (<code>doc</code> -> <code>HWPF</code> -> <code>FO</code> -> <code>PDF</code>) and
+				Apache POI + xdocreport (<code>docx</code> -> <code>XWPF</code> -> <code>PDF</code>).</p>
+		<p>Configuration example:</p>
+		<pre><code>
+		task("wordToPdf", type: ru.myllyenko.gradle.plugins.documents.converter.MsWordToPdfConversionTask)
+		{
+			from("src/main/word")
+			into("build/docs/pdf")
+
+			useLocalMsWord = false
+		}
+		</code></pre>
+		<h2>Release Notes</h2>
+		<h3>1.0.0 (2016-03-07)</h3>
+		<p>First version.</p>
+	</body>
+</html>
