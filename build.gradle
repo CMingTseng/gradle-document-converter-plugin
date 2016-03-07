@@ -59,8 +59,8 @@ apply from: "gradle/jacoco.gradle"
 
 pluginBundle
 {
-	website = "https://github.com/Myllyenko/gradle-word-to-pdf-converter-plugin"
-	vcsUrl = "https://github.com/Myllyenko/gradle-word-to-pdf-converter-plugin.git"
+	website = "https://github.com/Myllyenko/gradle-document-converter-plugin"
+	vcsUrl = "https://github.com/Myllyenko/gradle-document-converter-plugin.git"
 
 	plugins
 	{
