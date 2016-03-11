@@ -1,7 +1,0 @@
-apply plugin: "checkstyle"
-
-XmlSlurper slurper = new XmlSlurper()
-slurper.setFeature("http://apache.org/xml/features/disallow-doctype-decl", false)
-slurper.setFeature("http://apache.org/xml/features/nonvalidating/load-external-dtd", false)
-
-checkstyle.toolVersion = slurper.parse(checkstyle.config.asFile()).metadata.find{it.@name == "toolVersion"}.@value

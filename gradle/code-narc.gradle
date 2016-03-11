@@ -1,3 +1,0 @@
-apply plugin: "codenarc"
-
-codenarc.toolVersion = (new XmlSlurper().parse(codenarc.config.asFile()).description =~ /(?<=CodeNarc )\S+/)[0]

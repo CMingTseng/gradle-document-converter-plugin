@@ -1,7 +1,0 @@
-apply plugin: "pmd"
-
-pmd
-{
-	ruleSetConfig = resources.text.fromFile("config/pmd/rule-set.xml")
-	toolVersion = (new XmlSlurper().parse(ruleSetConfig.asFile()).description =~ /(?<=PMD )\S+/)[0]
-}
