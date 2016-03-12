@@ -6,3 +6,7 @@ before_install:
 jdk:
   - oraclejdk7
   - oraclejdk8
+
+cache:
+  directories:
+  - $HOME/.gradle
