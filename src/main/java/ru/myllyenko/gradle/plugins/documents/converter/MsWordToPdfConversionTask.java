@@ -1,25 +1,18 @@
 /*
- * The MIT License (MIT)
+ * Copyright (C) 2016 Igor Melnichenko
  *
- * Copyright (c) 2016 Igor Melnichenko
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
  *
- * Permission is hereby granted, free of charge, to any person obtaining a copy
- * of this software and associated documentation files (the "Software"), to deal
- * in the Software without restriction, including without limitation the rights
- * to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
- * copies of the Software, and to permit persons to whom the Software is
- * furnished to do so, subject to the following conditions:
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
  *
- * The above copyright notice and this permission notice shall be included in all
- * copies or substantial portions of the Software.
- *
- * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
- * IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
- * FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
- * AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
- * LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
- * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
- * SOFTWARE.
+ * You should have received a copy of the GNU General Public License
+ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
 package ru.myllyenko.gradle.plugins.documents.converter;
@@ -68,7 +61,38 @@ import javax.xml.transform.stream.StreamResult;
 import javax.xml.transform.stream.StreamSource;
 
 /**
+ * A task that converts Microsoft Word documents to PDF.
  *
+ * <p>It processes input files as a {@link org.gradle.api.tasks.Copy} task configured in the following way:</p>
+ * <ul>
+ *     <li><code>include("**{@literal /}*.doc")</code>;
+ *     <li><code>include("**{@literal /}*.docx")</code>;
+ *     <li><code>rename("(.+)\\.docx?$", "$1.pdf")</code>.
+ * </ul>
+ *
+ * <h2>Configuration Properties</h2>
+ * <table border="1" cellpadding="4">
+ *     <caption>Task Properties</caption>
+ *     <tr>
+ *         <th>Property</th>
+ *         <th>Default Value</th>
+ *     </tr>
+ *     <tr>
+ *         <td>{@link #useLocalMsWord}</td>
+ *         <td><code>false</code></td>
+ *     </tr>
+ * </table>
+ *
+ * <h2>Configuration Example</h2>
+ * <pre><code>
+ * task("wordToPdf", type: ru.myllyenko.gradle.plugins.documents.converter.MsWordToPdfConversionTask)
+ * {
+ *     from("src/main/word")
+ *     into("build/docs/pdf")
+ *
+ *     useLocalMsWord = true
+ * }
+ * </code></pre>
  *
  * @author <a href="mailto:myllyenko@ya.ru">Igor Melnichenko</a>
  */
@@ -96,8 +120,19 @@ public class MsWordToPdfConversionTask extends AbstractConversionTask
 		}
 	}
 
+	/**
+	 * Indicates whether or not document conversion must be performed by means of a local Microsoft Word instance.
+	 *
+	 * <p>The {@code true} value of this property is supported only on Windows platforms. If it is set, a local Microsoft Word instance is
+	 *         called via the <a href="http://www.suodenjoki.dk/us/productions/articles/word2pdf.htm">Michael Suodenjoki's script</a>.</p>
+	 * <p>If the property is set to {@code false}, conversion is performed by means of third-party Java libraries: Apache POI
+	 *         (<code>doc</code> → <code>HWPF</code> → <code>FO</code> → <code>PDF</code>) and Apache POI + xdocreport (<code>docx</code> →
+	 *         <code>XWPF</code> → <code>PDF</code>).</p>
+	 * <p>Please note that the latter approach is ill-suited for complex documents so use it carefully. It is chosen as default only for
+	 *         cross-platform compatibility reasons.</p>
+	 */
 	@Input
-	public boolean useLocalMsWord = (vbsScript != null);
+	public Boolean useLocalMsWord = null;
 
 	/**
 	 * Constructs a task.
@@ -110,6 +145,17 @@ public class MsWordToPdfConversionTask extends AbstractConversionTask
 		include("**/*.docx");
 
 		rename("(.+)\\.docx?$", "$1.pdf");
+	}
+
+	@Override
+	protected void copy()
+	{
+		if (this.useLocalMsWord && (vbsScript == null))
+		{
+			throw new GradleException("The useLocalMsWord parameter set to true is not supported on the current platform");
+		}
+
+		super.copy();
 	}
 
 	@Override

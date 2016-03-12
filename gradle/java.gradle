@@ -1,8 +1,12 @@
-sourceCompatibility = "1.8"
+sourceCompatibility = "1.7"
 targetCompatibility = sourceCompatibility
 
 tasks.withType(AbstractCompile)
 {
 	options.encoding = System.properties."file.encoding"
-	options.bootClasspath = "${this["java${project.sourceCompatibility.majorVersion}JdkDirectory"]}/jre/lib/rt.jar"
+
+	if (hasProperty("java${project.sourceCompatibility.majorVersion}JdkDirectory"))
+	{
+		options.bootClasspath = "${this["java${project.sourceCompatibility.majorVersion}JdkDirectory"]}/jre/lib/rt.jar"
+	}
 }
