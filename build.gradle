@@ -54,9 +54,7 @@ test
 	{
 		workingDir.deleteDir()
 		workingDir.mkdirs()
-		def classpathFiles = project.sourceSets.main.output.files + configurations.runtime.files -
-				configurations.detachedConfiguration(/*dependencies.gradleApi(), */dependencies.localGroovy())
-		systemProperties = ['test.classpath': classpathFiles.collect{it.canonicalPath}.join(';')]
+		systemProperties = ["test.classpath": sourceSets.main.runtimeClasspath.join(";")]
 	}
 }
 
