@@ -6,6 +6,9 @@ before_install:
 jdk:
   - oraclejdk8
 
+after_success:
+  - bash <(curl -s https://codecov.io/bash)
+
 cache:
   directories:
   - $HOME/.gradle
