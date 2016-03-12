@@ -18,6 +18,7 @@
 package ru.myllyenko.gradle.plugins.documents.converter;
 
 import org.apache.commons.io.FilenameUtils;
+import org.apache.commons.io.IOUtils;
 import org.apache.fop.apps.FOPException;
 import org.apache.fop.apps.Fop;
 import org.apache.fop.apps.FopFactory;
@@ -39,6 +40,7 @@ import org.gradle.api.internal.file.copy.FileCopyDetailsInternal;
 import org.gradle.api.internal.tasks.SimpleWorkResult;
 import org.gradle.api.tasks.Input;
 import org.gradle.api.tasks.WorkResult;
+import org.mozilla.universalchardet.UniversalDetector;
 
 import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
@@ -46,12 +48,13 @@ import java.io.File;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
+import java.nio.charset.Charset;
+import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
 
 import javax.xml.parsers.ParserConfigurationException;
 import javax.xml.transform.Transformer;
-import javax.xml.transform.TransformerConfigurationException;
 import javax.xml.transform.TransformerException;
 import javax.xml.transform.TransformerFactory;
 import javax.xml.transform.TransformerFactoryConfigurationError;
@@ -79,7 +82,7 @@ import javax.xml.transform.stream.StreamSource;
  *     </tr>
  *     <tr>
  *         <td>{@link #useLocalMsWord}</td>
- *         <td><code>false</code></td>
+ *         <td>{@value #DEFAULT_USE_LOCAL_MS_WORD_VALUE}</td>
  *     </tr>
  * </table>
  *
@@ -98,9 +101,13 @@ import javax.xml.transform.stream.StreamSource;
  */
 public class MsWordToPdfConversionTask extends AbstractConversionTask
 {
+	/**
+	 * A default value of the {@link #useLocalMsWord} property.
+	 */
+	public static final boolean DEFAULT_USE_LOCAL_MS_WORD_VALUE = false;
+
 	private static final String MS_WORD_TO_PDF_VBS_SCRIPT_NAME = "ms-word-to-pdf.vbs";
 
-	private static Path temporaryDirectory;
 	private static Path vbsScript = null;
 
 	static
@@ -109,8 +116,7 @@ public class MsWordToPdfConversionTask extends AbstractConversionTask
 		{
 			try
 			{
-				temporaryDirectory = Files.createTempDirectory(null);
-				vbsScript = temporaryDirectory.resolve(MS_WORD_TO_PDF_VBS_SCRIPT_NAME);
+				vbsScript = Files.createTempDirectory(null).resolve(MS_WORD_TO_PDF_VBS_SCRIPT_NAME);
 				Files.copy(MsWordToPdfConversionTask.class.getResourceAsStream(MS_WORD_TO_PDF_VBS_SCRIPT_NAME), vbsScript);
 			}
 			catch (IOException exception)
@@ -132,7 +138,7 @@ public class MsWordToPdfConversionTask extends AbstractConversionTask
 	 *         cross-platform compatibility reasons.</p>
 	 */
 	@Input
-	public Boolean useLocalMsWord = null;
+	public boolean useLocalMsWord = DEFAULT_USE_LOCAL_MS_WORD_VALUE;
 
 	/**
 	 * Constructs a task.
@@ -204,81 +210,122 @@ public class MsWordToPdfConversionTask extends AbstractConversionTask
 				{
 					try
 					{
-						if (useLocalMsWord && (vbsScript != null))
+						if (useLocalMsWord)
 						{
-							String command = "cscript " + vbsScript + " " + details.getFile().getAbsolutePath() + " /o:" + destination;
-							Runtime.getRuntime().exec(command).waitFor();
-
-							if (!Files.exists(destination))
-							{
-								useLocalMsWord = false;
-								this.convertWithLibrary(details.getFile().toPath(), destination);
-							}
+							this.convertWithWord(details, destination);
 						}
 						else
 						{
 							this.convertWithLibrary(details.getFile().toPath(), destination);
 						}
 					}
-					catch (IOException | InterruptedException | ParserConfigurationException | TransformerException |
-							TransformerFactoryConfigurationError | FOPException exception)
+					catch (DocumentConversionException exception)
 					{
-						throw new GradleException("Failed to convert the file: " + details.getName(), exception);
+						throw new GradleException("Failed to convert the file: " + details.getSourcePath(), exception);
 					}
 				}
 			}
 
-			private void convertWithLibrary(Path source, Path destination) throws IOException, ParserConfigurationException,
-					TransformerConfigurationException, TransformerException, TransformerFactoryConfigurationError, FOPException
+			private void convertWithWord(FileCopyDetailsInternal details, Path destination) throws DocumentConversionException
 			{
-				String extension = FilenameUtils.getExtension(source.getFileName().toString());
+				String baseExceptionMessage = "Failed to convert a document by means of a local MS Word instance";
 
-				switch (extension)
+				try
 				{
-					case "doc":
-						HWPFDocument hwpfDocument;
+					ProcessBuilder processBuilder = new ProcessBuilder(/*"cmd.exe", "/c", */"cscript",
+							vbsScript.toString(), details.getFile().getAbsolutePath(), "/o:" + destination.toString());
+					processBuilder.redirectErrorStream(true);
+					Process process = processBuilder.start();
+					process.waitFor();
 
-						try (InputStream inputStream = Files.newInputStream(source))
+					if (!Files.exists(destination))
+					{
+						StringBuilder exceptionMessageBuilder = new StringBuilder(baseExceptionMessage);
+						exceptionMessageBuilder.append(". VB script output:\n");
+
+						byte[] rawOutput;
+
+						try (InputStream processOutput = process.getInputStream())
 						{
-							hwpfDocument = new HWPFDocument(inputStream);
+							rawOutput = IOUtils.toByteArray(processOutput);
 						}
 
-						WordToFoConverter wordToFoConverter =
-								new WordToFoConverter(XMLHelper.getDocumentBuilderFactory().newDocumentBuilder().newDocument());
-						wordToFoConverter.processDocument(hwpfDocument);
+						UniversalDetector charsetDetector = new UniversalDetector(null);
+						charsetDetector.handleData(rawOutput, 0, rawOutput.length);
+						charsetDetector.dataEnd();
 
-						try (ByteArrayOutputStream outputStream = new ByteArrayOutputStream())
-						{
-							DOMSource domSource = new DOMSource(wordToFoConverter.getDocument());
-							TransformerFactory.newInstance().newTransformer().transform(domSource, new StreamResult(outputStream));
+						String detectedCharsetName = charsetDetector.getDetectedCharset();
+						Charset charset = (detectedCharsetName == null) ? StandardCharsets.UTF_8 : Charset.forName(detectedCharsetName);
 
-							try (InputStream foInputStream = new ByteArrayInputStream(outputStream.toByteArray());
-									OutputStream pdfStream = Files.newOutputStream(destination))
+						exceptionMessageBuilder.append(new String(rawOutput, charset));
+
+						throw new DocumentConversionException(exceptionMessageBuilder.toString());
+					}
+				}
+				catch (IOException | InterruptedException | TransformerFactoryConfigurationError exception)
+				{
+					throw new DocumentConversionException(baseExceptionMessage, exception);
+				}
+			}
+
+			private void convertWithLibrary(Path source, Path destination) throws DocumentConversionException
+			{
+				try
+				{
+					String extension = FilenameUtils.getExtension(source.getFileName().toString());
+
+					switch (extension)
+					{
+						case "doc":
+							HWPFDocument hwpfDocument;
+
+							try (InputStream inputStream = Files.newInputStream(source))
 							{
-								Fop fop = FopFactory.newInstance(new File(".").toURI()).newFop(MimeConstants.MIME_PDF, pdfStream);
-
-								Transformer transformer = TransformerFactory.newInstance().newTransformer();
-								transformer.transform(new StreamSource(foInputStream), new SAXResult(fop.getDefaultHandler()));
+								hwpfDocument = new HWPFDocument(inputStream);
 							}
-						}
 
-						break;
-					case "docx":
-						XWPFDocument xwpfDocument;
+							WordToFoConverter wordToFoConverter =
+									new WordToFoConverter(XMLHelper.getDocumentBuilderFactory().newDocumentBuilder().newDocument());
+							wordToFoConverter.processDocument(hwpfDocument);
 
-						try (InputStream inputStream = Files.newInputStream(source))
-						{
-							xwpfDocument = new XWPFDocument(inputStream);
-						}
+							try (ByteArrayOutputStream outputStream = new ByteArrayOutputStream())
+							{
+								DOMSource domSource = new DOMSource(wordToFoConverter.getDocument());
+								TransformerFactory.newInstance().newTransformer().transform(domSource, new StreamResult(outputStream));
 
-						try (OutputStream pdfStream = Files.newOutputStream(destination))
-						{
-							PdfConverter.getInstance().convert(xwpfDocument, pdfStream, PdfOptions.create());
-						}
+								try (InputStream foInputStream = new ByteArrayInputStream(outputStream.toByteArray());
+										OutputStream pdfStream = Files.newOutputStream(destination))
+								{
+									Fop fop = FopFactory.newInstance(new File(".").toURI()).newFop(MimeConstants.MIME_PDF, pdfStream);
 
-						break;
-					default:
-						throw new GradleException("The file to be processed has the unsupported extension: " + extension);
+									Transformer transformer = TransformerFactory.newInstance().newTransformer();
+									transformer.transform(new StreamSource(foInputStream), new SAXResult(fop.getDefaultHandler()));
+								}
+							}
+
+							break;
+						case "docx":
+							XWPFDocument xwpfDocument;
+
+							try (InputStream inputStream = Files.newInputStream(source))
+							{
+								xwpfDocument = new XWPFDocument(inputStream);
+							}
+
+							try (OutputStream pdfStream = Files.newOutputStream(destination))
+							{
+								PdfConverter.getInstance().convert(xwpfDocument, pdfStream, PdfOptions.create());
+							}
+
+							break;
+						default:
+							throw new DocumentConversionException("The file to be processed has the unsupported extension: " + extension);
+					}
+				}
+				catch (IOException | ParserConfigurationException | TransformerException | TransformerFactoryConfigurationError |
+						FOPException exception)
+				{
+					throw new DocumentConversionException("Failed to convert a document by means of Java libraries", exception);
 				}
 			}
 		}

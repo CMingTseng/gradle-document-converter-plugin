@@ -51,7 +51,7 @@ final class DocumentConverterPluginSpecification extends Specification
 	private static final List<Boolean> BOOLEAN_VALUES = [true, false]
 
 	@Unroll
-	void "Conversion tasks with Gradle #gradleVersion and useLocalMsWord = #useLocalMsWord"(String gradleVersion, boolean useLocalMsWord)
+	void "Gradle #gradleVersion, useLocalMsWord = #useLocalMsWord"(String gradleVersion, boolean useLocalMsWord)
 	{
 		Path projectDirectory = Files.createDirectories(Paths.get("${gradleVersion}-${useLocalMsWord}"))
 		Path destinationDirectory = projectDirectory.resolve("pdf")
