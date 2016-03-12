@@ -12,7 +12,12 @@ plugins
 
 apply from: "gradle/java.gradle"
 apply from: "gradle/javadoc.gradle"
-javadoc.title = "Gradle Document Converter Plugin ${project.version}"
+javadoc
+{
+	title = "Gradle Document Converter Plugin ${project.version}"
+
+	options.links("https://docs.gradle.org/current/javadoc/")
+}
 
 repositories
 {
