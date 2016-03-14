@@ -37,7 +37,7 @@ import java.util.concurrent.TimeUnit
  * @author <a href="mailto:myllyenko@ya.ru">Igor Melnichenko</a>
  */
 @Title("Document Converter Plugin Specification")
-@Timeout(value = 10, unit = TimeUnit.SECONDS)
+@Timeout(value = 20, unit = TimeUnit.SECONDS)
 final class DocumentConverterPluginSpecification extends Specification
 {
 	private static final Collection<File> CLASSPATH = System.properties."test.classpath".split(";").collect { new File(it) }
